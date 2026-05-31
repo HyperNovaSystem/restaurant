@@ -23,7 +23,7 @@ function countCustomersByState(
   state: 'queued' | 'seated' | 'leaving',
 ): number {
   let count = 0
-  for (const { value: customer } of world.entitiesWith(Customer)) {
+  for (const { value: customer } of world.iterEntitiesWith(Customer)) {
     if (customer.state === state) count++
   }
   return count

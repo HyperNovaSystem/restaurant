@@ -112,7 +112,7 @@ export function createRestaurant(options: RestaurantOptions = {}): RestaurantRef
       const dt = world.time.scaledDelta
       if (dt <= 0) return
       const p = r.arrivalRatePerSec * dt
-      if (world.rand.next() < p) {
+      if (world.rand.uniform() < p) {
         world.spawn([
           entry(
             Customer,

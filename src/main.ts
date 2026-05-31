@@ -29,7 +29,7 @@ const { world, restaurantId } = createRestaurant({
 const tableView = defineView({
   slot: 'floor',
   query: Has(Table),
-  changedOn: [Table],
+  changedOn: { mode: 'explicit', types: [Table] },
   create(e) {
     const t = world.getComponent(e.id, Table)
     const el = document.createElement('div')
@@ -78,10 +78,16 @@ function stateDuration(
   }
 }
 
-mountDOM(world, {
+// mountDOM now returns Result<MountHandle, MountError>. Discriminate on the
+// .ok literal (narrows both branches under strict). A mount failure is fatal
+// for the floor view, so surface it loudly.
+const mountResult = mountDOM(world, {
   slots: { floor },
   views: [tableView],
 })
+if (!mountResult.ok) {
+  throw new Error(`domecs: failed to mount floor view: ${mountResult.error.kind}`)
+}
 
 // ─── HUD: queue dots, waiter pills, stats — manual repaint ──────────
 function paintHUD(): void {
@@ -93,7 +99,7 @@ function paintHUD(): void {
   // is a leak-free one-shot read (#13) — paintHUD runs every tickEnd, so a live
   // world.query() here would register an undisposed query each frame.
   const queued: Array<{ id: number; patience: number }> = []
-  for (const e of world.select(Has(Customer))) {
+  for (const e of world.selectViews(Has(Customer))) {
     const c = world.getComponent(e.id, Customer)
     if (c && c.state === 'queued') queued.push({ id: e.id, patience: c.patience })
   }
@@ -108,7 +114,7 @@ function paintHUD(): void {
   // Waiter pills. Leak-free one-shot read (#13), same rationale as above.
   const pills: string[] = []
   const idx: number[] = []
-  for (const e of world.select(Has(Waiter))) {
+  for (const e of world.selectViews(Has(Waiter))) {
     const w = world.getComponent(e.id, Waiter)
     if (!w) continue
     idx.push(w.index)
@@ -196,4 +202,4 @@ world.signals.tickEnd.subscribe(() => {
 world.step(0)
 paintHUD()
 paintChrome()
-world.start({ dtClampMs: 100 })
+world.startLoop({ dtClampMs: 100 })
